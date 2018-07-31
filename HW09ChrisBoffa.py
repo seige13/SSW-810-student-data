@@ -1,9 +1,11 @@
-from StudentClasses import Student, Instructor
+from StudentClasses import Student, Instructor, Major
 from prettytable import PrettyTable
 
 students = {}
 instructors = {}
 courses = {}
+majors = {}
+passing_grades = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C']
 
 
 def read_large_file(file_object):
@@ -22,8 +24,27 @@ def process_students(path):
     try:
         with open(path) as file_handler:
             for line in read_large_file(file_handler):
-                students[line[0]] = Student(line[0], line[1])
+                students[line[0]] = Student(line[0], line[1], line[2])
         return students
+    except (IOError, OSError):
+        print("Error opening or processing file: {0}".format(path))
+        exit()
+
+
+def process_majors(path):
+    """Processes student from majors.txt"""
+    try:
+        with open(path) as file_handler:
+            for line in read_large_file(file_handler):
+                if not majors.get(line[0]):
+                    majors[line[0]] = Major(line[0])
+
+                if line[1].upper() == 'R':
+                    majors[line[0]].required.append(line[2])
+                else:
+                    majors[line[0]].electives.append(line[2])
+
+        return majors
     except (IOError, OSError):
         print("Error opening or processing file: {0}".format(path))
         exit()
@@ -48,7 +69,8 @@ def process_grades(path):
             for line in read_large_file(file_handler):
                 if students.get(line[0]):
                     student = students.get(line[0])  # type: Student
-                    student.completed_courses.append(line[1])
+                    if line[2] in passing_grades:
+                        student.completed_courses.append(line[1])
                 if instructors.get(line[3]):
                     instructor = instructors.get(line[3])
                     instructor.course.append(line[1])
@@ -66,21 +88,45 @@ def convert_instructor_to_courses():
                                instructor.course.count(course)]
 
 
+def assign_classes():
+    for key, student in students.items():
+        if majors.get(student.major):
+            major = majors.get(student.major)  # type: Major
+            student.remaining_required = set(major.required) - set(student.completed_courses)
+            if not set(student.completed_courses).intersection(major.electives):
+                student.remaining_electives = set(major.electives) - set(student.completed_courses)
+            else:
+                student.remaining_electives = None
+
+
 def read_and_process_school(folder):
     """ Read and process files by school folder """
     process_students('{0}/students.txt'.format(folder))
     process_instructors('{0}/instructors.txt'.format(folder))
     process_grades('{0}/grades.txt'.format(folder))
+    process_majors('{0}/majors.txt'.format(folder))
+    assign_classes()
+    print_major_summary()
     print_student_summary()
     print_instructor_summary()
 
 
 def print_student_summary():
     """ Print student summary table"""
-    table = PrettyTable(['CWID', 'Name', 'Completed Courses'])
+    table = PrettyTable(['CWID', 'Name', 'Major', 'Completed Courses', 'Remaining Required', 'Remaining Electives'])
     for key, student in students.items():
-        table.add_row([key, student.name, sorted(student.completed_courses)])
+        table.add_row([key, student.name, student.major, sorted(student.completed_courses), student.remaining_required,
+                       student.remaining_electives])
     print('Student Summary')
+    print(table)
+
+
+def print_major_summary():
+    """ Print major summary table"""
+    table = PrettyTable(['Dept', 'Required', 'Electives'])
+    for key, major in majors.items():
+        table.add_row([key, sorted(major.required), sorted(major.electives)])
+    print('Majors Summary')
     print(table)
 
 
