@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block body %}
+
+<h3>Stevens Repository</h3>
+
+<h4>Number of students by course and instructor</h4>
+
+<table>
+    <tr>
+        <th>CWID</th>
+        <th>Name</th>
+        <th>Department</th>
+        <th>Courses</th>
+        <th>Students</th>
+    </tr>
+    {% for instructor in instructors %}
+    <tr>
+        <td>{{ instructor[0] }}</td>
+        <td>{{ instructor[1] }}</td>
+        <td>{{ instructor[2] }}</td>
+        <td>{{ instructor[3] }}</td>
+        <td>{{ instructor[4] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

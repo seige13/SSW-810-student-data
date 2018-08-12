@@ -1,10 +1,11 @@
 from StudentClasses import Student, Instructor, Major
 from prettytable import PrettyTable
+from flask import Flask, render_template
+
 import sqlite3
 
 DB_FILE = './810_startup.db'
-
-db = sqlite3.connect(DB_FILE)
+app = Flask(__name__)
 
 
 class CollegeAdministration(object):
@@ -134,24 +135,23 @@ class CollegeAdministration(object):
         print('Majors Summary')
         print(table)
 
-    def print_instructor_summary(self, database):
-        """Print instructor summary table"""
-        cur = database.cursor()
-
+    def instructor_summary(self, cur):
+        """Get instructor summary table"""
         cur.execute(
             "select instructors.cwid, instructors.name, instructors.dept, grades.course, count(grades.student_cwid) as `students` from instructors inner join grades on instructors.cwid=grades.instructor_cwid group by grades.course order by instructors.cwid;")
         rows = cur.fetchall()
 
-        # convert_instructor_to_courses()
-        table = PrettyTable(['CWID', 'Name', 'Dept', 'Course', 'Students'])
-        for course in rows:
-            table.add_row([course[0], course[1], course[2], course[3], course[4]])
-        print('Instructor Summary')
-        print(table)
+        return rows
+
+
+@app.route('/')
+def initialize():
+    stevens = CollegeAdministration('stevens')
+    db = sqlite3.connect(DB_FILE)
+    cur = db.cursor()
+    instructors = stevens.instructor_summary(cur)
+    return render_template('stevens.html', instructors=instructors)
 
 
 if __name__ == '__main__':
-    stevens = CollegeAdministration('stevens')
-    # print_major_summary()
-    # print_student_summary()
-    stevens.print_instructor_summary(db)
+    app.run(debug=True)
